@@ -1,5 +1,7 @@
 import time
-import logging as log
+import logging
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.chrome.options import Options
@@ -9,11 +11,12 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from model.team import Team
-from config.db_config import get_connection
+from dao.team_dao import save
 
-log.basicConfig(
+logging.basicConfig(
+    datefmt="%H:%M:%S",
     format="[{levelname}] - {asctime} - {message}", style="{",
-    level=log.INFO
+    level=logging.INFO
 )
 
 URL = "https://www.scrapethissite.com/pages/forms/"
@@ -21,7 +24,7 @@ URL = "https://www.scrapethissite.com/pages/forms/"
 def setup() -> WebDriver:
     options = Options()
     options.add_argument("--headless")
-    
+
     driver = webdriver.Chrome(options=options)
     return driver
 
@@ -75,45 +78,25 @@ def extract_teams(html: BeautifulSoup) -> list[Team]:
         teams.append(team)
     
     return teams
-
-def load_db(teams: list[Team]) -> None:
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    sql = """
-        INSERT INTO tb_hockei_team(
-            name, year, wins, losses, ot_losses, win_percent, goals_for, goals_against, diff
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s 
-        )
-    """.strip()
-
-    for team in teams:
-        try:
-            log.info(f"inserindo dados do time: {team.name} no banco...")
-            cursor.execute(sql, tuple(team.__dict__.values()))
-        except Exception as ex:
-            log.error("erro ao inserir no banco: ", str(ex))
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
     
 if __name__ == "__main__":  
     with setup() as driver:
         driver.get(URL)
 
         links = extract_links(driver.page_source)
+        
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            for link in links:
+                new_link = make_url(link)
+                driver.get(new_link)
+                time.sleep(0.5)
 
-        for link in links:
-            new_link = make_url(link)
-            driver.get(new_link)
-            time.sleep(0.5)
+                html = get_soup(driver.page_source)
+                teams = extract_teams(html)
 
-            html = get_soup(driver.page_source)
-            teams = extract_teams(html)
+                for team in teams:
+                    executor.submit(save, team)
 
-            load_db(teams)
             
 
 
