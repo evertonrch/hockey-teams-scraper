@@ -1,7 +1,8 @@
 import time
-import logging
+import logging as log
 
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from bs4 import BeautifulSoup
 
@@ -10,10 +11,18 @@ from urllib.parse import urljoin
 from model.team import Team
 from config.db_config import get_connection
 
+log.basicConfig(
+    format="[{levelname}] - {asctime} - {message}", style="{",
+    level=log.INFO
+)
+
 URL = "https://www.scrapethissite.com/pages/forms/"
 
 def setup() -> WebDriver:
-    driver = webdriver.Chrome()
+    options = Options()
+    options.add_argument("--headless")
+    
+    driver = webdriver.Chrome(options=options)
     return driver
 
 def extract_links(html) -> list[str]:
@@ -43,15 +52,15 @@ def normalize(text: str, to_int=False) -> str | int:
     return int(text.strip()) if to_int else text.strip() 
 
 def create_team(row) -> Team:
-    name = normalize(row.find(class_="name"))
-    year = normalize(row.find(class_="year"), to_int=True)
-    wins = normalize(row.find(class_="wins"), to_int=True)
-    losses = normalize(row.find(class_="losses"), to_int=True)
-    ot_losses = normalize(row.find(class_="ot-losses"))
-    pct = normalize(row.find(class_="pct"))
-    gf = normalize(row.find(class_="gf"), to_int=True)
-    ga = normalize(row.find(class_="ga"), to_int=True)
-    diff = normalize(row.find(class_="diff"))
+    name = normalize(row.find(class_="name").text)
+    year = normalize(row.find(class_="year").text, to_int=True)
+    wins = normalize(row.find(class_="wins").text, to_int=True)
+    losses = normalize(row.find(class_="losses").text, to_int=True)
+    ot_losses = normalize(row.find(class_="ot-losses").text)
+    pct = normalize(row.find(class_="pct").text)
+    gf = normalize(row.find(class_="gf").text, to_int=True)
+    ga = normalize(row.find(class_="ga").text, to_int=True)
+    diff = normalize(row.find(class_="diff").text)
 
     return Team(
         name, year, wins, losses, ot_losses, pct, gf, ga, diff
@@ -81,9 +90,10 @@ def load_db(teams: list[Team]) -> None:
 
     for team in teams:
         try:
-            cursor.execute(sql, (team.__dict__.values(),))
+            log.info(f"inserindo dados do time: {team.name} no banco...")
+            cursor.execute(sql, tuple(team.__dict__.values()))
         except Exception as ex:
-            print("erro ao inserir no banco")
+            log.error("erro ao inserir no banco: ", str(ex))
     
     conn.commit()
     cursor.close()
