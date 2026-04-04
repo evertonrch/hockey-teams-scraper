@@ -1,4 +1,5 @@
 import time
+import logging
 
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium import webdriver
@@ -7,6 +8,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from model.team import Team
+from config.db_config import get_connection
 
 URL = "https://www.scrapethissite.com/pages/forms/"
 
@@ -37,16 +39,19 @@ def make_url(link: str) -> str:
     URL_BASE = "https://www.scrapethissite.com"
     return urljoin(URL_BASE, link)
 
+def normalize(text: str, to_int=False) -> str | int:
+    return int(text.strip()) if to_int else text.strip() 
+
 def create_team(row) -> Team:
-    name = row.find(class_="name").text.strip()
-    year = row.find(class_="year").text.strip()
-    wins = row.find(class_="wins").text.strip()
-    losses =row.find(class_="losses").text.strip()
-    ot_losses = row.find(class_="ot-losses").text.strip()
-    pct = row.find(class_="pct").text.strip()
-    gf = row.find(class_="gf").text.strip()
-    ga = row.find(class_="ga").text.strip()
-    diff = row.find(class_="diff").text.strip()
+    name = normalize(row.find(class_="name"))
+    year = normalize(row.find(class_="year"), to_int=True)
+    wins = normalize(row.find(class_="wins"), to_int=True)
+    losses = normalize(row.find(class_="losses"), to_int=True)
+    ot_losses = normalize(row.find(class_="ot-losses"))
+    pct = normalize(row.find(class_="pct"))
+    gf = normalize(row.find(class_="gf"), to_int=True)
+    ga = normalize(row.find(class_="ga"), to_int=True)
+    diff = normalize(row.find(class_="diff"))
 
     return Team(
         name, year, wins, losses, ot_losses, pct, gf, ga, diff
@@ -63,9 +68,28 @@ def extract_teams(html: BeautifulSoup) -> list[Team]:
     return teams
 
 def load_db(teams: list[Team]) -> None:
-    pass
+    conn = get_connection()
+    cursor = conn.cursor()
 
-if __name__ == "__main__":
+    sql = """
+        INSERT INTO tb_hockei_team(
+            name, year, wins, losses, ot_losses, win_percent, goals_for, goals_against, diff
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s 
+        )
+    """.strip()
+
+    for team in teams:
+        try:
+            cursor.execute(sql, (team.__dict__.values(),))
+        except Exception as ex:
+            print("erro ao inserir no banco")
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+if __name__ == "__main__":  
     with setup() as driver:
         driver.get(URL)
 
@@ -78,6 +102,8 @@ if __name__ == "__main__":
 
             html = get_soup(driver.page_source)
             teams = extract_teams(html)
+
+            load_db(teams)
             
 
 
