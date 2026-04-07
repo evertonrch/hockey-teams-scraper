@@ -1,17 +1,17 @@
 # Web Scraper - Hockey Teams
 
-Este projeto realiza a coleta de dados fictício do site https://www.scrapethissite.com/pages/forms/ de equipes de hockey a partir de páginas HTML e persiste as informações em um banco de dados PostgreSQL.
+Este projeto realiza a coleta de dados fictÃ­cio do site https://www.scrapethissite.com/pages/forms/ de equipes de hockey a partir de pÃ¡ginas HTML e persiste as informaÃ§Ãµes em um banco de dados PostgreSQL.
 
-## ?? Tecnologias utilizadas
+## ğŸš€ Tecnologias utilizadas
 
 - Python 3
 - requests
 - BeautifulSoup (bs4)
 - psycopg2 (PostgreSQL)
 
-## ?? Funcionalidades
+## âš™ï¸ Funcionalidades
 
-- Requisições HTTP para obtenção das páginas
+- RequisiÃ§Ãµes HTTP para obtenÃ§Ã£o das pÃ¡ginas
 - Parsing de HTML com BeautifulSoup
-- Extração de dados estruturados
-- Extração de dados paginados
+- ExtraÃ§Ã£o de dados estruturados
+- ExtraÃ§Ã£o de dados paginados
