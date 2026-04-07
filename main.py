@@ -16,6 +16,7 @@ logging.basicConfig(
 )
 
 URL = "https://www.scrapethissite.com/pages/forms/"
+URL_BASE = "https://www.scrapethissite.com"
 
 def extract_links(html) -> list[str]:
     html = get_soup(html)
@@ -37,7 +38,6 @@ def get_soup(html) -> BeautifulSoup:
     return BeautifulSoup(html, "html.parser")
 
 def mount_url(link: str) -> str:
-    URL_BASE = "https://www.scrapethissite.com"
     return urljoin(URL_BASE, link)
 
 def normalize(text: str, to_int=False) -> str | int:
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     links = extract_links(response.text)
     
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(process, links)
             
 
