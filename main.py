@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     links = extract_links(response.text)
     
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         executor.map(process, links)
             
 
